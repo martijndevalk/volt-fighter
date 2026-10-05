@@ -1,0 +1,17 @@
+{
+  "name": "volt-fighter",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@rive-app/webgl2": "latest"
+  },
+  "devDependencies": {
+    "vite": "^7.0.0"
+  }
+}

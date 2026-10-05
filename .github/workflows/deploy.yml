@@ -1,0 +1,48 @@
+# Deploy naar GitHub Pages
+#
+# Bouwt de site bij elke push naar `main` en deployet hem naar de `gh-pages`-branch.
+
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Stel pnpm in
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - name: Stel Node.js in (LTS)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "lts/*"
+          cache: "pnpm"
+
+      - name: Installeer dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build de site
+        run: pnpm build
+
+      - name: Deploy naar GitHub Pages (gh-pages branch)
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          publish_branch: gh-pages
