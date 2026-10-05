@@ -54,7 +54,41 @@ const rive = new Rive({
 
 window.addEventListener('resize', () => rive.resizeDrawingSurfaceToCanvas())
 
-// ---- Gamepad polling ---------------------------------------------------------
+// ---- Toetsenbord + muis ------------------------------------------------------
+const KEYS = {
+  left: ['ArrowLeft', 'KeyA'],
+  right: ['ArrowRight', 'KeyD'],
+  jump: ['ArrowUp', 'KeyW', 'Space'],
+  shoot: ['KeyJ', 'KeyX', 'KeyZ', 'ControlLeft', 'ControlRight'],
+  start: ['Enter'],
+}
+const GAME_KEYS = new Set(Object.values(KEYS).flat())
+const down = new Set()
+const mouse = { left: false, right: false }
+
+window.addEventListener('keydown', (e) => {
+  if (!GAME_KEYS.has(e.code)) return
+  e.preventDefault()
+  down.add(e.code)
+})
+window.addEventListener('keyup', (e) => down.delete(e.code))
+window.addEventListener('blur', () => { down.clear(); mouse.left = mouse.right = false })
+
+// Muis: linker klik = schieten, rechter klik = springen
+canvas.addEventListener('pointerdown', (e) => {
+  if (e.pointerType !== 'mouse') return
+  if (e.button === 0) mouse.left = true
+  if (e.button === 2) mouse.right = true
+})
+window.addEventListener('pointerup', (e) => {
+  if (e.button === 0) mouse.left = false
+  if (e.button === 2) mouse.right = false
+})
+canvas.addEventListener('contextmenu', (e) => e.preventDefault())
+
+const key = (name) => KEYS[name].some((c) => down.has(c))
+
+// ---- Input samenvoegen (gamepad + toetsenbord + muis) --------------------------
 const prev = { jump: false, shoot: false, start: false }
 let hadPad = false
 
@@ -65,18 +99,21 @@ function activePad() {
 function tick() {
   const pad = activePad()
   if (!!pad !== hadPad) { hadPad = !!pad; updateLabel() }
-  if (pad && vmi) {
-    const b = (i) => !!pad.buttons[i]?.pressed
-    let x = pad.axes[0] ?? 0
+  if (vmi) {
+    const b = (i) => !!pad?.buttons[i]?.pressed
+    let x = pad?.axes[0] ?? 0
     if (Math.abs(x) < DEADZONE) x = 0
     if (b(BTN.LEFT)) x = -1
     if (b(BTN.RIGHT)) x = 1
+    if (key('left')) x = -1
+    if (key('right')) x = 1
+    if (key('left') && key('right')) x = 0
 
     const left = x < 0
     const right = x > 0
-    const jump = b(BTN.A) || b(BTN.B) || b(BTN.UP) || b(BTN.LB)
-    const shoot = b(BTN.X) || b(BTN.Y) || b(BTN.RB) || b(BTN.RT) || b(BTN.LT)
-    const start = b(BTN.START) || jump // START of SPRING start het spel
+    const jump = b(BTN.A) || b(BTN.B) || b(BTN.UP) || b(BTN.LB) || key('jump') || mouse.right
+    const shoot = b(BTN.X) || b(BTN.Y) || b(BTN.RB) || b(BTN.RT) || b(BTN.LT) || key('shoot') || mouse.left
+    const start = b(BTN.START) || key('start') || jump || shoot // elke actie start het spel
 
     setBool('leftHeld', left)
     setBool('rightHeld', right)
@@ -97,7 +134,9 @@ requestAnimationFrame(tick)
 
 function updateLabel() {
   const pad = activePad()
-  padLabel.textContent = pad ? `Gamepad: ${pad.id}` : 'Geen gamepad – druk op een knop'
+  padLabel.textContent = pad
+    ? `Gamepad: ${pad.id}`
+    : 'Toetsen: ←/→ of A/D bewegen · ↑/W/spatie springen · J/X/Z schieten · Enter start · muis: links schiet, rechts springt'
 }
 window.addEventListener('gamepadconnected', updateLabel)
 window.addEventListener('gamepaddisconnected', updateLabel)
